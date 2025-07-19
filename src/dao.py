@@ -53,6 +53,35 @@ class BaseDAO(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await session.execute(stmt)
         return result.scalar_one()
 
+    @classmethod
+    async def add(
+        cls,
+        session: AsyncSession,
+        obj_in: CreateSchemaType | dict[str, Any],
+    ) -> ModelType:
+        """
+        Добавить запись в текущую сессию.
+
+        Если `obj_in` является моделью Pydantic, из него удаляются не заданные явно поля.
+
+        Args:
+            session(AsyncSession): асинхронная сессия SQLAlchemy.
+            obj_in(CreateSchemaType | dict[str, Any]): Pydantic-схема или словарь данных для обновления.
+            returning(bool = True): возвращать ли все поля модели.
+
+        Returns:
+            ModelType: созданный экземпляр модели.
+        """
+
+        if isinstance(obj_in, dict):
+            create_data = obj_in
+        else:
+            create_data = obj_in.model_dump(exclude_unset=True)
+
+        stmt = insert(cls.model).values(**create_data).returning(cls.model)
+        result = await session.execute(stmt)
+        return result.scalars().one()
+
     # MARK: Read
     @classmethod
     async def find_all_sorted(
@@ -81,6 +110,22 @@ class BaseDAO(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         )
         result = await session.execute(stmt)
         return result.scalars().all()
+
+    @classmethod
+    async def find_one_or_none(
+        cls,
+        *where,
+        session: AsyncSession,
+    ) -> ModelType | None:
+        """
+        Вернуть одну запись или `None`, если запись не найдена.
+
+        Returns:
+            ModelType|None: найденный экземпляр модели или `None`, если запись не найдена.
+        """
+
+        stmt = select(cls.model).where(*where)
+        return await session.scalar(stmt)
 
     # MARK: Update
     @classmethod
