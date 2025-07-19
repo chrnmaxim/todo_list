@@ -1,0 +1,47 @@
+services:
+
+  postgres-dev:
+    profiles: ["dev"]
+    image: postgres:16-alpine
+    container_name: postgres-dev
+    env_file:
+      - ./.env
+    ports:
+      - ${POSTGRES_PORT}:5432
+    expose:
+      - 5432
+    volumes:
+      - ./docker/postgres/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/
+      - pgdata-dev:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dev
+
+  app-dev:
+    profiles: ["dev"]
+    image: cr.yandex/crp7o1fbap0arrgqqlea/todo-api:latest
+    container_name: app-dev
+    env_file:
+      - ./.env.src
+    ports:
+      - 8000:8000
+    expose:
+      - 8000
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    command: uvicorn src.main:app --host 0.0.0.0 --loop uvloop
+    networks:
+      - dev
+
+volumes:
+  pgdata-dev:
+
+networks:
+  dev:
