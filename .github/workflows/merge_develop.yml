@@ -16,7 +16,7 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Update APP_VERSION from Git commit hash
+      - name: Set App Version as Git commit hash
         shell: bash
         run: |
           APP_VERSION=$(git describe --always --dirty --tags --long)
@@ -75,12 +75,7 @@ jobs:
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
           format: markdown
           message: |
-            Merge PR выполнен успешно 🚀!
-
-            [PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}]
-            (https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }})
-
-            Ветка: develop
+            🚀 Merge [PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}](https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}) в develop выполнен успешно!
 
   send_message_failure:
     name: Wokflow failed
@@ -95,9 +90,4 @@ jobs:
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
           format: markdown
           message: |
-            При Merge PR возникла ошибка 🚨!
-
-            [PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}]
-            (https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }})
-
-            Ветка: develop
+            🚨 При Merge [PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}](https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}) в develop возникла ошибка!
