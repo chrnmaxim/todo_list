@@ -1,5 +1,7 @@
+import asyncio
 import uuid
 
+from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src import exceptions
@@ -21,17 +23,57 @@ class TaskService:
     Позволяет выполнять CRUD операции.
     """
 
+    # MARK: BackgroundTasks
+    @classmethod
+    async def _update_task_status_in_background(
+        cls,
+        task_id: uuid.UUID,
+        time_to_complete: int,
+        session: AsyncSession,
+    ) -> None:
+        """Фоновая задача для обновления статуса задачи по истечении времени."""
+
+        await asyncio.sleep(time_to_complete)
+        await TaskDAO.partial_update(
+            TaskModel.id == task_id, obj_in={"is_completed": True}, session=session
+        )
+        await session.commit()
+
     # MARK: Create
     @classmethod
     async def create_task(
-        cls, task_data: TaskCreateSchema, session: AsyncSession
+        cls,
+        background_tasks: BackgroundTasks,
+        task_data: TaskCreateSchema,
+        session: AsyncSession,
     ) -> TaskReadSchema:
-        """Создать новую задачу."""
+        """
+        Создать новую задачу.
 
-        created_task = await TaskDAO.add(session=session, obj_in=task_data)
+        Если задан параметр `task_data.to_be_completed_at`, то запустится
+        фоновая задача FastAPI, которая изменит статус задачи
+        на `is_completed=True` по истечении указанного времени.
+        """
+
+        created_task_id = await TaskDAO.add_returning_id(
+            session=session, obj_in=task_data
+        )
         await session.commit()
 
-        return TaskReadSchema.model_validate(created_task)
+        if task_data.time_to_complete is not None:
+            background_tasks.add_task(
+                func=cls._update_task_status_in_background,
+                task_id=created_task_id,
+                time_to_complete=task_data.time_to_complete,
+                session=session,
+            )
+
+        return TaskReadSchema(
+            title=task_data.title,
+            description=task_data.description,
+            is_completed=False,
+            id=created_task_id,
+        )
 
     # MARK: Read
     @classmethod
@@ -51,14 +93,15 @@ class TaskService:
 
         count = await TaskDAO.count(*where, session=session)
         if count:
-            tasks = await TaskDAO.find_all_sorted(
+            task_mappings = await TaskDAO.get_tasks_data(
                 *where,
-                session=session,
-                order_by=TaskModel.created_at,
                 offset=query.offset,
                 limit=query.limit,
                 asc=query.asc,
+                session=session,
             )
+            tasks = [TaskReadSchema.model_validate(task) for task in task_mappings]
+
         else:
             tasks = []
 
@@ -76,14 +119,21 @@ class TaskService:
             TaskNotFound: Задача не найдена `HTTP_404_NOT_FOUND`.
         """
 
-        updated_task = await TaskDAO.full_update(
-            TaskModel.id == task_id, session=session, obj_in=task_data
+        updated_task_data = await TaskDAO.update_task_full_data(
+            task_data=task_data, task_id=task_id, session=session
         )
-        if updated_task is None:
+        if updated_task_data is None:
             raise exceptions.TaskNotFound
+
         await session.commit()
 
-        return TaskReadSchema.model_validate(updated_task)
+        return TaskReadSchema(
+            title=task_data.title,
+            description=task_data.description,
+            is_completed=task_data.is_completed,
+            id=task_id,
+            completion=updated_task_data["completion"],
+        )
 
     # MARK: Delete
     @classmethod

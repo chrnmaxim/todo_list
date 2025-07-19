@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,8 +18,8 @@ class TaskCreateSchema(BaseModel):
 
     title: str = Field(description="Заголовок задачи")
     description: str | None = Field(default=None, description="Описание задачи")
-    to_be_completed_at: datetime | None = Field(
-        default=None, description="Дата и время завершения задачи"
+    time_to_complete: int | None = Field(
+        default=None, description="Время до завершения задачи в секундах", ge=10, le=300
     )
 
 
@@ -29,9 +28,6 @@ class TaskUpdateSchema(BaseModel):
 
     title: str = Field(description="Заголовок задачи")
     description: str | None = Field(description="Описание задачи")
-    to_be_completed_at: datetime | None = Field(
-        description="Дата и время завершения задачи"
-    )
     is_completed: bool = Field(description="Статус выполнения задачи")
 
 
@@ -39,8 +35,10 @@ class TaskReadSchema(TaskUpdateSchema):
     """Схема для отображения задачи."""
 
     id: uuid.UUID = Field(description="Идентификатор задачи")
-    created_at: datetime = Field(description="Дата и время создания задачи")
-    updated_at: datetime = Field(description="Дата и время обновления задачи")
+    completion: int = Field(
+        default=0,
+        description="Прогресс выполнения задачи, %",
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

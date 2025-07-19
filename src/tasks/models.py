@@ -22,10 +22,9 @@ class TaskModel(Base):
     is_completed: Mapped[bool] = mapped_column(
         default=False, comment="Статус выполнения задачи"
     )
-    to_be_completed_at: Mapped[datetime | None] = mapped_column(
-        TIMESTAMP(timezone=True),
+    time_to_complete: Mapped[int | None] = mapped_column(
         nullable=True,
-        comment="Дата и время завершения задачи",
+        comment="Время до завершения задачи в секундах, задаваемое при создании",
     )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Generic, Tuple, TypeVar
+from typing import Any, Generic, Literal, Tuple, TypeVar, overload
 
 from pydantic import BaseModel
 from sqlalchemy import Select, delete, insert, select, update
@@ -25,23 +25,23 @@ class BaseDAO(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     # MARK: Create
     @classmethod
-    async def add(
+    async def add_returning_id(
         cls,
         session: AsyncSession,
         obj_in: CreateSchemaType | dict[str, Any],
-    ) -> ModelType:
+    ) -> uuid.UUID:
         """
-        Добавить запись в текущую сессию.
+        Добавить запись в текущую сессию и вернуть `id` созданной записи.
 
         Если `obj_in` является моделью Pydantic, из него удаляются не заданные явно поля.
 
         Args:
             session(AsyncSession): асинхронная сессия SQLAlchemy.
-            obj_in(CreateSchemaType | dict[str, Any]): Pydantic-схема или словарь данных для обновления.
-            returning(bool = True): возвращать ли все поля модели.
+            obj_in(CreateSchemaType | dict[str, Any]): Pydantic-схема или словарь данных
+                для обновления.
 
         Returns:
-            ModelType: созданный экземпляр модели.
+            uuid.UUID: `id` созданного экземпляра модели.
         """
 
         if isinstance(obj_in, dict):
@@ -49,9 +49,9 @@ class BaseDAO(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         else:
             create_data = obj_in.model_dump(exclude_unset=True)
 
-        stmt = insert(cls.model).values(**create_data).returning(cls.model)
+        stmt = insert(cls.model).values(**create_data).returning(cls.model.id)
         result = await session.execute(stmt)
-        return result.scalars().one()
+        return result.scalar_one()
 
     # MARK: Read
     @classmethod
@@ -84,30 +84,55 @@ class BaseDAO(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     # MARK: Update
     @classmethod
-    async def full_update(
+    @overload
+    async def partial_update(
         cls,
         *where,
         session: AsyncSession,
         obj_in: UpdateSchemaType | dict[str, Any],
+        returning: Literal[True],
+    ) -> ModelType: ...
+
+    @classmethod
+    @overload
+    async def partial_update(
+        cls,
+        *where,
+        session: AsyncSession,
+        obj_in: UpdateSchemaType | dict[str, Any],
+        returning: Literal[False] = False,
+    ) -> ModelType: ...
+
+    @classmethod
+    async def partial_update(
+        cls,
+        *where,
+        session: AsyncSession,
+        obj_in: UpdateSchemaType | dict[str, Any],
+        returning: bool = True,
     ) -> ModelType | None:
         """
-        Обновить запись целиком в текущей сессии. Применимо для `PUT`-запросов.
+        Обновить запись частично в текущей сессии. Применимо для `PATCH`-запросов.
 
         Если `obj_in` является моделью Pydantic, из него удаляются не заданные явно поля.
 
         Returns:
-            ModelType|None: обновленный экземпляр модели или `None`, если запись не найдена.
+            ModelType|None:
+                обновленный экземпляр модели или `None`, если запись не найдена
+                или указан параметр `returning=False`.
         """
 
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
-            update_data = obj_in.model_dump()
+            update_data = obj_in.model_dump(exclude_unset=True)
 
-        stmt = (
-            update(cls.model).where(*where).values(**update_data).returning(cls.model)
-        )
-        return await session.scalar(stmt)
+        stmt = update(cls.model).where(*where).values(**update_data)
+        if returning:
+            stmt = stmt.returning(cls.model)
+            return await session.scalar(stmt)
+        else:
+            await session.execute(stmt)
 
     # MARK: Delete
     @classmethod

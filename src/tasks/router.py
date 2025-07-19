@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.dependencies import get_session
@@ -49,12 +49,21 @@ async def get_tasks_route(
     responses={status.HTTP_201_CREATED: {"model": TaskReadSchema}},
 )
 async def create_task_route(
+    background_tasks: BackgroundTasks,
     task_data: TaskCreateSchema,
     session: AsyncSession = Depends(get_session),
 ) -> TaskReadSchema:
-    """Создать новую задачу."""
+    """
+    Создать новую задачу.
 
-    return await TaskService.create_task(task_data=task_data, session=session)
+    Если задан параметр `to_be_completed_at`, то запустится
+    фоновая задача FastAPI, которая изменит статус задачи
+    на `is_completed=True` по истечении указанного времени.
+    """
+
+    return await TaskService.create_task(
+        background_tasks=background_tasks, task_data=task_data, session=session
+    )
 
 
 # MARK: Put
