@@ -51,10 +51,10 @@ jobs:
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.WORKER_HOST }}
-          username: ${{ secrets.WORKER_USER }}
-          key: ${{ secrets.WORKER_SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          passphrase: ${{ secrets.VM_SSH_PASSPHRASE }}
           script: |
             echo ${{ secrets.YC_TOKEN}} | docker login --username oauth --password-stdin cr.yandex
             docker compose -f docker-compose-vm.yml --profile dev down
@@ -75,8 +75,12 @@ jobs:
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
           format: markdown
           message: |
-            Merge [PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}](
-            https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}) в develop выполнен успешно.
+            Merge PR выполнен успешно 🚀!
+
+            [PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}]
+            (https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }})
+
+            Ветка: develop
 
   send_message_failure:
     name: Wokflow failed
@@ -91,5 +95,9 @@ jobs:
           token: ${{ secrets.ACTIONS_BOT_TOKEN }}
           format: markdown
           message: |
-            При Merge [PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}](
-            https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}) в develop возникла ошибка!
+            При Merge PR возникла ошибка 🚨!
+
+            [PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}]
+            (https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }})
+
+            Ветка: develop
