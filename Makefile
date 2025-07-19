@@ -5,6 +5,9 @@ ruff_check:
 test:
 	docker compose -f docker-compose.yml run --rm app-test
 	docker compose -f docker-compose.yml --profile test down --volumes
+push_dev:
+	docker build --build-arg ENV=build --platform linux/amd64 -t cr.yandex/crp7o1fbap0arrgqqlea/todo-api:latest --provenance=false ./
+	docker push cr.yandex/crp7o1fbap0arrgqqlea/todo-api:latest
 start_dev:
 	docker compose -f docker-compose.yml --profile dev up -d --build
 	docker container exec app-dev alembic upgrade heads
