@@ -9,7 +9,10 @@ from src.config import api_settings
 from src.tasks.router import tasks_router
 
 app = FastAPI(
-    title=api_settings.APP_NAME, swagger_ui_parameters={"operationsSorter": "method"}
+    title=api_settings.APP_NAME,
+    description=f"{api_settings.APP_NAME} в режиме {api_settings.MODE}",
+    version=api_settings.APP_VERSION,
+    swagger_ui_parameters={"operationsSorter": "method"},
 )
 
 app.add_middleware(
