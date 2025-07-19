@@ -8,6 +8,13 @@ COPY pyproject.toml uv.lock /app/
 
 RUN uv sync --all-groups --no-cache --compile-bytecode --frozen
 
+RUN if [ "$ENV" = "build" ]; then \
+      uv sync --no-dev --no-cache --compile-bytecode --frozen; \
+    else \
+      uv sync --all-groups --no-cache --compile-bytecode --frozen; \
+    fi
+
+
 COPY . /app
 
 ENV PATH="/app/.venv/bin:$PATH"
