@@ -28,7 +28,7 @@ jobs:
 
       - name: Build and Push to Yandex Container Registry
         run: |
-          make push dev
+          make push_dev
 
   deploy_app:
     name: Deploy API to Compute Cloud
