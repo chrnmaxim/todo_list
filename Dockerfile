@@ -6,7 +6,7 @@ WORKDIR  /app
 
 COPY pyproject.toml uv.lock /app/
 
-RUN uv sync --all-groups --no-cache --compile-bytecode --frozen
+ARG ENV
 
 RUN if [ "$ENV" = "build" ]; then \
       uv sync --no-dev --no-cache --compile-bytecode --frozen; \
