@@ -58,7 +58,4 @@ make remove_dev
 
 
 ## Деплой
-
-Проект развернут в Yandex Cloud и доступен по адресу http://158.160.183.111:8000/.
-> [!NOTE]
-> Деплой выполняется с помощью GitHub Actions при успешном merge PR в ветку `develop`.
+Деплой выполняется с помощью GitHub Actions при успешном merge PR в ветку `develop`.
